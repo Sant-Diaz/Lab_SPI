@@ -180,7 +180,187 @@ El voluntario puede retirar la mano si el dolor se vuelve insoportable. La manio
 
 ### Parte B — Código MATLAB y resultados
 
-#### B.1 Código de adquisición y cálculo del SPI
+#### B.1 Código de Arduino 
+El siguiente código implementa la adquisición y procesamiento de la señal infrarroja (IR) proveniente de un sensor MAX30105. A partir de esta señal, se calcula el índice de perfusión (PI%), una medida relacionada con la variabilidad del flujo sanguíneo periférico.
+
+```
+#include <Wire.h>
+#include "MAX30105.h"
+#include "heartRate.h"
+
+MAX30105 particleSensor;
+
+const int WINDOW_SIZE = 100;
+long irWindow[WINDOW_SIZE];
+int  windowIndex = 0;
+bool windowFull  = false;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(21, 22);
+
+  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+    Serial.println("ERROR");
+    while (1);
+  }
+
+  particleSensor.setup();          // configuración base
+  particleSensor.setPulseAmplitudeRed(0);   // apagado rojo
+  particleSensor.setPulseAmplitudeIR(0x1F); // encender IR con buena amplitud
+  particleSensor.setPulseAmplitudeGreen(0);  // apagado verde
+}
+
+void loop() {
+  long irRaw = particleSensor.getIR();
+
+  irWindow[windowIndex] = irRaw;
+  windowIndex = (windowIndex + 1) % WINDOW_SIZE;
+  if (windowIndex == 0) windowFull = true;
+
+  float PI_percent = 0.0;
+
+  if (windowFull) {
+    long irMax = irWindow[0], irMin = irWindow[0];
+    long irSum = 0;
+
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+      if (irWindow[i] > irMax) irMax = irWindow[i];
+      if (irWindow[i] < irMin) irMin = irWindow[i];
+      irSum += irWindow[i];
+    }
+
+    float AC = (float)(irMax - irMin);
+    float DC = (float)irSum / WINDOW_SIZE;
+
+    if (DC > 0) PI_percent = (AC / DC) * 100.0;
+  }
+
+  // Enviar IR crudo + PI%
+  Serial.print(irRaw);
+  Serial.print(",");
+  Serial.println(PI_percent, 4);
+
+  delay(10); // ~100 Hz
+}
+```
+Este algoritmo emplea una ventana deslizante de 100 muestras para estimar las componentes AC (pulsátil) y DC (continua) de la señal IR. A partir de estas, se calcula el índice de perfusión como la relación entre ambas, expresada en porcentaje. Este método permite obtener una señal más estable y representativa del comportamiento hemodinámico periférico.
+#### B.2 Codigo de Matlab
+El siguiente script en MATLAB permite adquirir, procesar y analizar una señal PPG en tiempo real proveniente de un microcontrolador. A partir de esta señal, se realiza el cálculo de la frecuencia cardíaca (BPM) y del índice de perfusión simplificado (SPI), útil para evaluar cambios hemodinámicos como los inducidos por el Cold Pressor Test.
+```
+clc;
+clear;
+close all;
+```
+Se define la frecuencia de muestreo y se solicita al usuario el tiempo total de adquisición.
+```
+Fs = 100;
+
+answer = inputdlg("Ingrese el tiempo de adquisición (s):", ...
+"Tiempo de adquisición", 1, {"20"});
+
+if isempty(answer)
+    error("Cancelado");
+end
+
+T = str2double(answer{1});
+```
+Se establece la comunicación con el microcontrolador para recibir los datos de la señal PPG.
+```
+s = serialport("COM12",115200);
+configureTerminator(s,"LF");
+flush(s);
+pause(2);
+```
+Se crean las líneas animadas para visualizar la señal y los picos detectados.
+```
+figure;
+h1 = animatedline('LineWidth',1.5);
+hPeak = animatedline('Color','g','Marker','o','LineStyle','none');
+
+xlabel("Tiempo [s]");
+ylabel("PPG");
+title("Inicializando...");
+grid on;
+```
+Se definen buffers y variables necesarias para el procesamiento, detección de picos y cálculo de métricas.
+```
+WINDOW_TIME = 5;
+WINDOW_SAMPLES = round(WINDOW_TIME * Fs);
+
+ppg_rt = [];
+ts_rt  = [];
+ppg_filt = [];
+
+estado = 0;
+last_peak_time = 0;
+last_valley = 0;
+
+peak_times = [];
+pulse_amplitudes = [];
+
+SPI_values = [];
+SPI_times  = [];
+```
+Se descartan muestras iniciales para evitar ruido o datos inestables.
+```
+disp("Estabilizando...");
+tic;
+while toc < 1.5
+    readline(s);
+end
+```
+Se leen los datos desde el puerto serial y se convierten a valores numéricos.
+```
+while toc <= T
+
+    linea = readline(s);
+    nums = regexp(linea,'[-+]?\d*\.?\d+','match');
+
+    if isempty(nums)
+        continue;
+    end
+
+    y = str2double(nums{1});
+    if isnan(y)
+        continue;
+    end
+```
+Se elimina la componente DC, se suaviza la señal y se normaliza para facilitar el análisis.
+```
+dc = mean(ppg_rt(end-win_dc:end));
+y_dc = y - dc;
+y_s = mean(ppg_rt(end-4:end)) - dc;
+y_plot = y_s / max(abs(seg_dc));
+```
+Se identifican picos y valles analizando cambios en la pendiente de la señal.
+```
+if ppg_filt(i) > ppg_filt(i-1)
+    estado = 1;
+elseif ppg_filt(i) < ppg_filt(i-1)
+    estado = -1;
+```
+Se calcula la frecuencia cardíaca a partir del tiempo entre picos consecutivos.
+```
+dt = diff(peak_times);
+bpm = 60 / mean(dt);
+```
+Se obtiene un índice basado en la amplitud del pulso y la frecuencia cardíaca, con normalización y suavizado.
+```
+SPI_raw = 0.7 * amp_norm + 0.3 * hr_norm;
+SPI_inst = 100 * SPI_raw;
+```
+Se actualiza la gráfica y se muestran los valores calculados.
+```
+addpoints(h1, t_now, y_plot);
+title(sprintf("BPM: %.1f | SPI: %.1f", bpm, SPI));
+drawnow limitrate;
+```
+Se cierra la comunicación serial y se finaliza el programa.
+```
+clear s
+disp("Finalizado");
+```
+Se implementa un sistema de procesamiento en tiempo real de la señal PPG, donde la detección de picos se realiza mediante el método conocido como “escalador”, basado en el análisis de los cambios de pendiente de la señal para identificar máximos (picos) y mínimos (valles). A partir de estos puntos, se calcula la frecuencia cardíaca (BPM) usando el intervalo entre picos consecutivos, y la amplitud del pulso como diferencia entre pico y valle. Posteriormente, estas variables se normalizan y combinan para estimar un índice de perfusión simplificado (SPI), el cual es suavizado para mayor estabilidad. En conjunto, el código permite adquirir datos desde un dispositivo externo, filtrar la señal, detectar eventos fisiológicos relevantes y visualizar en tiempo real la respuesta cardiovascular, siendo especialmente útil para analizar cambios inducidos por estímulos como el Cold Pressor Test.
 
 #### B.3 Resultados
 
