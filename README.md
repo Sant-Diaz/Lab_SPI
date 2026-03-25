@@ -118,11 +118,7 @@ El módulo MAX integra el LED infrarrojo, el fotodetector y el circuito de acond
 
 > El módulo MAX30102 opera a 1.8V internamente pero acepta niveles lógicos de 3.3V en I2C
 
-#### A.3 Sketch de Arduino
-
-#### A.4 Verificación con Serial Plotter
-
-#### A.5 Cold Pressor Test (CPT)
+#### A.3 Cold Pressor Test (CPT)
 
 El *Cold Pressor Test* es una técnica experimental que consiste en sumergir la mano en agua helada (0 – 4 °C) durante un tiempo determinado para generar una respuesta nociceptiva aguda, reproducible y controlada sin causar daño tisular permanente.
 
