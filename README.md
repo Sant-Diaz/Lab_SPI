@@ -12,32 +12,8 @@ Asignatura: Instrumentación Biomédica y Biosensores
 |--------|--------|
 | [Nombre 1] | [@usuario1] |
 | [Nombre 2] | [@usuario2] |
-| [Nombre 3] | [@usuario3] |
 
----
 
-## Estructura del repositorio
-
-```
-lab3-SPI/
-├── README.md
-├── parte_A/
-│   └── imagenes/
-│       ├── [IMAGEN] montaje_sensor.jpg
-│       └── [IMAGEN] serial_plotter_ppg.png
-├── parte_B/
-│   ├── codigo/
-│   │   ├── adquisicion_SPI.m
-│   │   └── grafica_SPI.m
-│   └── resultados/
-│       ├── [IMAGEN] señal_ppg_cruda.png
-│       ├── [IMAGEN] grafica_SPI_vs_tiempo.png
-│       └── [IMAGEN] PPI_PPA_vs_tiempo.png
-└── parte_C/
-    └── preguntas_discusion.md
-```
-
----
 
 ## 1. Introducción
 
