@@ -1,8 +1,6 @@
-# Laboratorio 3 — Cálculo ambulatorio del índice pletismográfico quirúrgico (SPI)
+<h1 align="center">Laboratorio 3 — Cálculo Ambulatorio del Indice Pletismográfico Quirúrgico (SPI)</h1>
 
-**Universidad Militar Nueva Granada**  
-Programa: Ingeniería Biomédica · Semestre VII  
-Asignatura: Instrumentación Biomédica y Biosensores
+**Universidad Militar Nueva Granada**  | Programa: Ingeniería Biomédica · Semestre VII  | Asignatura: Instrumentación Biomédica y Biosensores
 
 
 ## 1. Introducción
