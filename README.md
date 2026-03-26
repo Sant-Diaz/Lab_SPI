@@ -262,12 +262,12 @@ T = str2double(answer{1});
 ```
 Se establece la comunicación con el microcontrolador para recibir los datos de la señal PPG.
 ```
-s = serialport("COM12",115200);
+s = serialport("COM8",115200);
 configureTerminator(s,"LF");
 flush(s);
 pause(2);
 ```
-Se crean las líneas animadas para visualizar la señal y los picos detectados.
+Se configura la gráfica para mostrar la señal PPG y los picos detectados.
 ```
 figure;
 h1 = animatedline('LineWidth',1.5);
@@ -278,7 +278,7 @@ ylabel("PPG");
 title("Inicializando...");
 grid on;
 ```
-Se definen buffers y variables necesarias para el procesamiento, detección de picos y cálculo de métricas.
+Se crean buffers y variables necesarias para el procesamiento, detección de picos y almacenamiento de resultados.
 ```
 WINDOW_TIME = 5;
 WINDOW_SAMPLES = round(WINDOW_TIME * Fs);
@@ -296,8 +296,11 @@ pulse_amplitudes = [];
 
 SPI_values = [];
 SPI_times  = [];
+
+all_peak_times  = [];
+all_peak_values = [];
 ```
-Se descartan muestras iniciales para evitar ruido o datos inestables.
+Se descartan muestras iniciales para evitar ruido del sensor al inicio.
 ```
 disp("Estabilizando...");
 tic;
@@ -305,61 +308,65 @@ while toc < 1.5
     readline(s);
 end
 ```
-Se leen los datos desde el puerto serial y se convierten a valores numéricos.
+Se leen los datos desde el puerto serial, se validan y se almacenan junto con su tiempo correspondiente.
 ```
-while toc <= T
-
-    linea = readline(s);
-    nums = regexp(linea,'[-+]?\d*\.?\d+','match');
-
-    if isempty(nums)
-        continue;
-    end
-
-    y = str2double(nums{1});
-    if isnan(y)
-        continue;
-    end
+linea = readline(s);
+nums = regexp(linea,'[-+]?\d*\.?\d+','match');
+y = str2double(nums{1});
 ```
-Se elimina la componente DC, se suaviza la señal y se normaliza para facilitar el análisis.
+Se elimina la componente DC, se suaviza la señal y se normaliza para mejorar la detección de picos.
 ```
-dc = mean(ppg_rt(end-win_dc:end));
+dc = mean(ppg_rt);
 y_dc = y - dc;
 y_s = mean(ppg_rt(end-4:end)) - dc;
 y_plot = y_s / max(abs(seg_dc));
 ```
-Se identifican picos y valles analizando cambios en la pendiente de la señal.
+Se detectan picos y valles analizando los cambios en la pendiente de la señal.
 ```
 if ppg_filt(i) > ppg_filt(i-1)
     estado = 1;
 elseif ppg_filt(i) < ppg_filt(i-1)
     estado = -1;
 ```
-Se calcula la frecuencia cardíaca a partir del tiempo entre picos consecutivos.
+Se calcula la frecuencia cardíaca a partir del intervalo entre picos consecutivos.
 ```
 dt = diff(peak_times);
 bpm = 60 / mean(dt);
 ```
-Se obtiene un índice basado en la amplitud del pulso y la frecuencia cardíaca, con normalización y suavizado.
+Se estima el índice de perfusión combinando la amplitud del pulso y la frecuencia cardíaca, con normalización y suavizado.
 ```
 SPI_raw = 0.7 * amp_norm + 0.3 * hr_norm;
 SPI_inst = 100 * SPI_raw;
 ```
-Se actualiza la gráfica y se muestran los valores calculados.
+Se actualiza la gráfica mostrando la señal y los valores de BPM y SPI.
 ```
 addpoints(h1, t_now, y_plot);
 title(sprintf("BPM: %.1f | SPI: %.1f", bpm, SPI));
-drawnow limitrate;
+```
+Se divide la señal en tres segmentos temporales para analizar el comportamiento en diferentes fases del experimento.
+```
+seg_dur = T / 3;
+```
+Se calcula para cada segmento:
+- BPM promedio
+- SPI promedio
+- Visualización de picos
+
+
+Se muestra la evolución completa del SPI con su promedio y divisiones entre fases.
+```
+plot(SPI_times, SPI_values);
+yline(mean(SPI_values));
 ```
 Se cierra la comunicación serial y se finaliza el programa.
 ```
 clear s
-disp("Finalizado");
+disp("Finalizado.");
 ```
 Se implementa un sistema de procesamiento en tiempo real de la señal PPG, donde la detección de picos se realiza mediante el método conocido como “escalador”, basado en el análisis de los cambios de pendiente de la señal para identificar máximos (picos) y mínimos (valles). A partir de estos puntos, se calcula la frecuencia cardíaca (BPM) usando el intervalo entre picos consecutivos, y la amplitud del pulso como diferencia entre pico y valle. Posteriormente, estas variables se normalizan y combinan para estimar un índice de perfusión simplificado (SPI), el cual es suavizado para mayor estabilidad. En conjunto, el código permite adquirir datos desde un dispositivo externo, filtrar la señal, detectar eventos fisiológicos relevantes y visualizar en tiempo real la respuesta cardiovascular, siendo especialmente útil para analizar cambios inducidos por estímulos como el Cold Pressor Test.
 
 #### B.3 Resultados
-
+En la siguiente tabla se muestran los tiempos de las fases del Cold Pressor Test, utilizado en la práctica de laboratorio para medir el índice pletismográfico quirúrgico.
 ##### Tabla de valores SPI por fase
 <div align="center">
 
@@ -389,54 +396,102 @@ Se implementa un sistema de procesamiento en tiempo real de la señal PPG, donde
 </div>
 
 
-
-
-##### Señal PPG sin procesar
+A continuación se presentan los resultados obtenidos a partir del procesamiento de la señal PPG durante el experimento. La señal fue dividida en tres intervalos de tiempo de 40 segundos cada uno, correspondientes a las diferentes fases del protocolo.
 
 
 
-##### PPI y PPA en el tiempo
+<div align="center">
+
+<img src="https://github.com/user-attachments/assets/24266495-abf9-419c-972a-fa5fbe58e5fd" width="1100"><br>
+<sub><b>a. Señal PPG segmentada en tres intervalos (40 s cada uno)</b></sub>
+
+<br><br>
+
+<img src="https://github.com/user-attachments/assets/a78bfb63-b7d4-4395-9d28-e5d97f47ac63" width="1100"><br>
+<sub><b>b. Detección de picos y unión entre latidos</b></sub>
+
+</div>
+En la figura (a) se observa la señal PPG filtrada dividida en tres segmentos temporales, lo que permite visualizar el comportamiento de la señal en cada fase del experimento. En la figura (b) se muestran los picos detectados junto con su conexión temporal, lo cual facilita la identificación de la periodicidad de los latidos y el cálculo de la frecuencia cardíaca.
 
 
 ## 5. Análisis de resultados
 
-### Análisis 1 — Comparación con valores clínicos intraoperatorios
+A partir de las señales obtenidas, se evaluó el comportamiento de la señal PPG y del índice de perfusión (SPI) en tres intervalos de 40 segundos, correspondientes a las fases basal, estímulo (Cold Pressor Test) y recuperación.
 
-Durante una cirugía bajo anestesia general con analgesia adecuada, el SPI típicamente se mantiene en el rango **20 – 50**. Valores superiores a 50 indican respuesta nociceptiva insuficientemente controlada y suelen requerir ajuste de la dosis analgésica.
+### Comportamiento de la señal PPG
 
-| Condición | SPI práctica | SPI clínico de referencia |
-|-----------|-------------|---------------------------|
-| Sin estímulo / reposo | [COMPLETAR] | 20 – 50 (analgesia adecuada) |
-| Estímulo nociceptivo (CPT) | [COMPLETAR] | > 50 (requiere analgesia adicional) |
-| Recuperación | [COMPLETAR] | < 50 (post-analgesia) |
+La señal PPG filtrada presenta una morfología periódica estable en los tres segmentos, con detección consistente de picos, lo que indica una adecuada calidad de adquisición. La frecuencia cardíaca promedio se mantiene relativamente constante entre segmentos (≈ 91–96 BPM), lo cual es característico de un sujeto en estado de reposo.
 
-> [COMPLETAR con análisis propio: ¿los valores obtenidos son consistentes con el rango clínico esperado? ¿Por qué sí o por qué no?]
+Durante el segundo intervalo (CPT), se observa una ligera disminución en la amplitud de la señal, lo que sugiere la presencia de vasoconstricción periférica inducida por el estímulo frío. Posteriormente, en la fase de recuperación, la amplitud tiende a aumentar nuevamente, evidenciando un proceso de reperfusión.
 
-### Análisis 2 — Alcance y limitaciones del sistema
+### Comportamiento del SPI
 
-**Fortalezas:**
-- El módulo MAX integra el circuito de acondicionamiento, reduciendo la complejidad del hardware y los artefactos por ruido externo respecto a una implementación discreta.
-- La señal PPG obtenida permite calcular PPI y PPA con suficiente resolución para estimar el SPI.
-- El sistema captura la respuesta fisiológica al CPT de forma cuantitativa.
+Los valores promedio del SPI obtenidos fueron:
 
-**Limitaciones:**
+- **Segmento 1 (Basal):** 86.5  
+- **Segmento 2 (CPT):** 80.2  
+- **Segmento 3 (Recuperación):** 89.2  
 
-| Limitación | Descripción |
-|-----------|-------------|
-| Artefactos por movimiento | El sensor es muy susceptible a movimiento del dedo durante la captura. |
-| Normalización subjetiva | Los valores basales de PPI y PPA dependen del estado inicial del voluntario, introduciendo variabilidad entre sujetos. |
-| Fórmula aproximada | La expresión propietaria de GE Healthcare no está publicada; se usa la aproximación académica de Huiku *et al.* |
-| Contexto no clínico | La validación del SPI fue desarrollada para pacientes bajo anestesia general; extrapolar a individuos conscientes tiene limitaciones interpretativas. |
+Se observa una **disminución del SPI durante el estímulo frío**, seguida de un **aumento en la fase de recuperación**. Este comportamiento es consistente con la fisiología esperada en sujetos conscientes, donde el frío induce vasoconstricción periférica, reduciendo la amplitud de la señal PPG y, por ende, el valor del índice.
 
----
 
-## 6. Conclusiones
+### Comparación con valores clínicos intraoperatorios
 
-**Puntos clave a incluir:**
-- La **nocicepción** es el proceso neurofisiológico de detección de estímulos dañinos; el **dolor** es la experiencia subjetiva consciente que resulta de él. Un paciente bajo anestesia experimenta nocicepción sin dolor consciente — el SPI mide la primera.
-- El aumento del SPI durante el CPT confirma que el sistema es sensible a la activación simpática producida por un estímulo nociceptivo.
-- [Reflexión propia sobre el funcionamiento del sistema, dificultades encontradas y posibles mejoras.]
+En el contexto clínico, el SPI se utiliza para evaluar el balance nocicepción–analgesia en pacientes bajo anestesia general. En estos casos, el comportamiento esperado es diferente al observado en este experimento.
 
+<div align="center">
+
+<table>
+  <tr>
+    <th>Fase</th>
+    <th>Paciente anestesiado (clínico)</th>
+    <th>Sujeto consciente (experimental)</th>
+  </tr>
+  <tr>
+    <td>Basal</td>
+    <td>SPI bajo (20–50)</td>
+    <td>SPI alto (≈80–90)</td>
+  </tr>
+  <tr>
+    <td>Estímulo nociceptivo</td>
+    <td>Aumento del SPI</td>
+    <td>Disminución del SPI</td>
+  </tr>
+  <tr>
+    <td>Recuperación / analgesia</td>
+    <td>Disminución del SPI</td>
+    <td>Aumento del SPI</td>
+  </tr>
+</table>
+
+</div>
+
+Esta diferencia se debe a que en el entorno clínico:
+- El paciente está bajo efecto de anestésicos y opioides  
+- El SPI está calibrado para detectar cambios en la nocicepción  
+- La respuesta simpática está modulada farmacológicamente  
+
+Mientras que en este experimento:
+- El sujeto está consciente y en reposo  
+- No hay intervención farmacológica  
+- El SPI refleja principalmente cambios hemodinámicos periféricos  
+
+
+### Interpretación fisiológica
+
+La disminución del SPI durante el Cold Pressor Test se explica por la activación del sistema nervioso simpático, que genera vasoconstricción periférica. Esto reduce la componente pulsátil (AC) de la señal PPG, afectando directamente el cálculo del índice. Aunque la frecuencia cardíaca puede aumentar ligeramente, su contribución al SPI es menor en comparación con la amplitud del pulso.
+
+Los resultados obtenidos son coherentes con la fisiología de un sujeto consciente sometido a un estímulo frío. La disminución del SPI durante el CPT y su posterior recuperación confirman que el sistema implementado es capaz de detectar cambios en la perfusión periférica. Sin embargo, se evidencia que la interpretación del SPI depende fuertemente del contexto, ya que su significado clínico en anestesia no es directamente extrapolable a condiciones experimentales sin intervención farmacológica.
+
+## 6. Conclusione
+
+## 🧠 Conclusión
+
+El presente trabajo permitió implementar y validar un sistema de adquisición y procesamiento de la señal fotopletismográfica (PPG) orientado al análisis del índice de perfusión (SPI) como indicador indirecto de la actividad autonómica. A partir de los resultados obtenidos, se evidenció la capacidad del sistema para detectar variaciones fisiológicas asociadas a la activación simpática inducida por el Cold Pressor Test, particularmente a través de cambios en la amplitud de la señal y en la dinámica temporal de los latidos.
+
+Es importante resaltar que la nocicepción, entendida como el proceso neurofisiológico de detección de estímulos potencialmente dañinos, difiere del dolor como experiencia subjetiva consciente. En este sentido, aunque el SPI es utilizado clínicamente en pacientes bajo anestesia para evaluar el balance nocicepción–analgesia, en el contexto experimental desarrollado —con un sujeto consciente— el índice refleja principalmente cambios hemodinámicos periféricos más que una medida directa de dolor.
+
+Los resultados mostraron una disminución del SPI durante la fase de estímulo frío, seguida de una recuperación posterior, comportamiento que es consistente con la vasoconstricción periférica inducida por la activación del sistema nervioso simpático. Este hallazgo confirma que, aun cuando el estímulo se aplicó en la extremidad contralateral a la medición, la respuesta observada es de carácter sistémico y fisiológicamente coherente.
 
 ## 7. Preguntas para la discusión
 
@@ -448,14 +503,48 @@ Cuando predomina la **activación parasimpática** (reposo, analgesia adecuada),
 
 ### Pregunta 2 — ¿Cómo se compara el SPI con el ANI y el índice de perfusión?
 <div align="center">
-| Característica | SPI | ANI | Índice de perfusión (PI) |
-|----------------|-----|-----|--------------------------|
-| Señal de entrada | PPG | ECG (HRV) | PPG |
-| Variable principal | PPI + PPA ponderadas | Variabilidad FC en banda parasimpática (0,15–0,5 Hz) | Relación componente AC / DC de la PPG |
-| Rango | 0 – 100 | 0 – 100 | 0,02 % – 20 % |
-| Alerta nociceptiva | SPI > 50 | ANI < 50 | No específico para nocicepción |
-| Fabricante | GE Healthcare | MDoloris Medical Systems | Masimo |
+
+<table style="text-align:center;">
+  <tr>
+    <th>Característica</th>
+    <th>SPI</th>
+    <th>ANI</th>
+    <th>Índice de perfusión (PI)</th>
+  </tr>
+  <tr>
+    <td>Señal de entrada</td>
+    <td>PPG</td>
+    <td>ECG (HRV)</td>
+    <td>PPG</td>
+  </tr>
+  <tr>
+    <td>Variable principal</td>
+    <td>PPI + PPA ponderadas</td>
+    <td>Variabilidad FC en banda parasimpática (0,15–0,5 Hz)</td>
+    <td>Relación componente AC / DC de la PPG</td>
+  </tr>
+  <tr>
+    <td>Rango</td>
+    <td>0 – 100</td>
+    <td>0 – 100</td>
+    <td>0,02 % – 20 %</td>
+  </tr>
+  <tr>
+    <td>Alerta nociceptiva</td>
+    <td>SPI &gt; 50</td>
+    <td>ANI &lt; 50</td>
+    <td>No específico para nocicepción</td>
+  </tr>
+  <tr>
+    <td>Fabricante</td>
+    <td>GE Healthcare</td>
+    <td>MDoloris Medical Systems</td>
+    <td>Masimo</td>
+  </tr>
+</table>
+
 </div>
+
 El **ANI** evalúa la actividad parasimpática mediante análisis espectral de la variabilidad de la frecuencia cardíaca y tiende a ser más sensible a cambios rápidos de nocicepción, pero requiere ECG de alta calidad. El **SPI**, al basarse en la PPG, es más sencillo de adquirir y robusto en algunas condiciones. El **índice de perfusión** no fue diseñado para monitorizar dolor sino para evaluar el estado circulatorio periférico y la calidad de la señal PPG; sin embargo, dado que la vasoconstricción afecta tanto al PI como a la PPA del SPI, existe correlación entre ellos durante respuestas nociceptivas simpáticas. Los tres índices son complementarios y ninguno es superior en todas las condiciones clínicas.
 
 ---
