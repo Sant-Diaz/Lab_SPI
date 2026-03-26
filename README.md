@@ -485,8 +485,6 @@ Los resultados obtenidos son coherentes con la fisiología de un sujeto conscien
 
 ## 6. Conclusione
 
-## 🧠 Conclusión
-
 El presente trabajo permitió implementar y validar un sistema de adquisición y procesamiento de la señal fotopletismográfica (PPG) orientado al análisis del índice de perfusión (SPI) como indicador indirecto de la actividad autonómica. A partir de los resultados obtenidos, se evidenció la capacidad del sistema para detectar variaciones fisiológicas asociadas a la activación simpática inducida por el Cold Pressor Test, particularmente a través de cambios en la amplitud de la señal y en la dinámica temporal de los latidos.
 
 Es importante resaltar que la nocicepción, entendida como el proceso neurofisiológico de detección de estímulos potencialmente dañinos, difiere del dolor como experiencia subjetiva consciente. En este sentido, aunque el SPI es utilizado clínicamente en pacientes bajo anestesia para evaluar el balance nocicepción–analgesia, en el contexto experimental desarrollado —con un sujeto consciente— el índice refleja principalmente cambios hemodinámicos periféricos más que una medida directa de dolor.
