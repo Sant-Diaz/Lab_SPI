@@ -400,95 +400,88 @@ A continuación se presentan los resultados obtenidos a partir del procesamiento
 
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/24266495-abf9-419c-972a-fa5fbe58e5fd" width="1100"><br>
-<sub><b>a. Señal PPG segmentada en tres intervalos (40 s cada uno)</b></sub>
+<img src="https://github.com/user-attachments/assets/359edcb2-6410-47ba-a9f4-dd8ae9e447aa" width="900"><br>
+<sub><b>a. Señal PPG </b></sub>
 
-<br><br>
+<br><br><br>
 
-<img src="https://github.com/user-attachments/assets/a78bfb63-b7d4-4395-9d28-e5d97f47ac63" width="1100"><br>
+<img src="https://github.com/user-attachments/assets/d2d880bc-9c80-4bf0-8410-1c87546abeac" width="900"><br>
 <sub><b>b. Detección de picos y unión entre latidos</b></sub>
 
-</div>
-En la figura (a) se observa la señal PPG filtrada dividida en tres segmentos temporales, lo que permite visualizar el comportamiento de la señal en cada fase del experimento. En la figura (b) se muestran los picos detectados junto con su conexión temporal, lo cual facilita la identificación de la periodicidad de los latidos y el cálculo de la frecuencia cardíaca.
+<br><br><br>
 
+<img src="https://github.com/user-attachments/assets/51e626de-0708-487f-a8e6-d22d34986219" width="900"><br>
+<sub><b>c. Resultado de la detección de picos en el SPI</b></sub>
+
+</div>
+En la figura (a) se observa la señal PPG sin filtros recibida desde la ESP32, la señal procesada para calculo del SPI y la deteccion de picos a través del método del "escalador". En la figura (b) se muestran los picos detectados junto con su conexión temporal, lo cual facilita la identificación de la periodicidad de los latidos y el cálculo de la frecuencia cardíaca. En la figura (c) se muestra los resultados obtenidos en la prueba de CPT.
 
 ## 5. Análisis de resultados
 
-A partir de las señales obtenidas, se evaluó el comportamiento de la señal PPG y del índice de perfusión (SPI) en tres intervalos de 40 segundos, correspondientes a las fases basal, estímulo (Cold Pressor Test) y recuperación.
+A partir de las señales adquiridas mediante la ESP32, se evaluó el comportamiento de la señal PPG y del índice pletismográfico quirúrgico (SPI) en tres intervalos de 40 segundos: **basal (0–40 s), estímulo (Cold Pressor Test, 40–80 s) y recuperación (80–120 s)**.
+
 
 ### Comportamiento de la señal PPG
 
-La señal PPG filtrada presenta una morfología periódica estable en los tres segmentos, con detección consistente de picos, lo que indica una adecuada calidad de adquisición. La frecuencia cardíaca promedio se mantiene relativamente constante entre segmentos (≈ 91–96 BPM), lo cual es característico de un sujeto en estado de reposo.
+La señal sin filtrar presenta variaciones lentas asociadas a la componente DC y oscilaciones pulsátiles correspondientes al flujo sanguíneo. Tras el procesamiento, se obtiene una señal con mejor relación señal–ruido, permitiendo la detección robusta de picos y valles (**157 picos en 3001 muestras**), lo que indica una adecuada calidad de adquisición.
 
-Durante el segundo intervalo (CPT), se observa una ligera disminución en la amplitud de la señal, lo que sugiere la presencia de vasoconstricción periférica inducida por el estímulo frío. Posteriormente, en la fase de recuperación, la amplitud tiende a aumentar nuevamente, evidenciando un proceso de reperfusión.
+Durante el intervalo correspondiente al **Cold Pressor Test (CPT)**, se observa una **disminución significativa en la amplitud de la señal procesada**, especialmente al inicio del estímulo. Este comportamiento es consistente con un proceso de **vasoconstricción periférica inducida por el frío**, que reduce la componente pulsátil (AC) de la señal PPG.
+
+En la fase de recuperación, la señal muestra una **tendencia a la estabilización**, aunque sin retornar completamente a las condiciones iniciales dentro del intervalo analizado, lo cual sugiere una recuperación hemodinámica progresiva.
+
+
 
 ### Comportamiento del SPI
 
 Los valores promedio del SPI obtenidos fueron:
 
-- **Segmento 1 (Basal):** 86.5  
-- **Segmento 2 (CPT):** 80.2  
-- **Segmento 3 (Recuperación):** 89.2  
+- **SPI basal (0–40 s):** 49.46  
+- **SPI durante CPT (40–80 s):** 58.14  
+- **SPI recuperación (80–120 s):** 48.96  
 
-Se observa una **disminución del SPI durante el estímulo frío**, seguida de un **aumento en la fase de recuperación**. Este comportamiento es consistente con la fisiología esperada en sujetos conscientes, donde el frío induce vasoconstricción periférica, reduciendo la amplitud de la señal PPG y, por ende, el valor del índice.
+Se observa un **incremento claro del SPI durante el estímulo frío**, seguido de una **disminución en la fase de recuperación**, retornando a valores cercanos a la línea basal (~50).
 
+### Relación entre PPG y SPI
 
-### Comparación con valores clínicos intraoperatorios
+Durante el CPT se observa una aparente contradicción: mientras la **amplitud de la señal PPG disminuye**, el **SPI aumenta**. Este comportamiento es fisiológicamente coherente debido a que:
 
-En el contexto clínico, el SPI se utiliza para evaluar el balance nocicepción–analgesia en pacientes bajo anestesia general. En estos casos, el comportamiento esperado es diferente al observado en este experimento.
+- El SPI no depende únicamente de la amplitud de la señal  
+- El estímulo frío activa el sistema nervioso simpático  
+- Esto genera:
+  - **Vasoconstricción periférica** → disminución de la amplitud PPG  
+  - **Aumento del tono simpático** → incremento del SPI  
 
-<div align="center">
-
-<table>
-  <tr>
-    <th>Fase</th>
-    <th>Paciente anestesiado (clínico)</th>
-    <th>Sujeto consciente (experimental)</th>
-  </tr>
-  <tr>
-    <td>Basal</td>
-    <td>SPI bajo (20–50)</td>
-    <td>SPI alto (≈80–90)</td>
-  </tr>
-  <tr>
-    <td>Estímulo nociceptivo</td>
-    <td>Aumento del SPI</td>
-    <td>Disminución del SPI</td>
-  </tr>
-  <tr>
-    <td>Recuperación / analgesia</td>
-    <td>Disminución del SPI</td>
-    <td>Aumento del SPI</td>
-  </tr>
-</table>
-
-</div>
-
-Esta diferencia se debe a que en el entorno clínico:
-- El paciente está bajo efecto de anestésicos y opioides  
-- El SPI está calibrado para detectar cambios en la nocicepción  
-- La respuesta simpática está modulada farmacológicamente  
-
-Mientras que en este experimento:
-- El sujeto está consciente y en reposo  
-- No hay intervención farmacológica  
-- El SPI refleja principalmente cambios hemodinámicos periféricos  
-
+Por tanto, el SPI refleja principalmente la **respuesta autonómica global**, mientras que la PPG representa de forma más directa la **perfusión periférica local**.
 
 ### Interpretación fisiológica
 
-La disminución del SPI durante el Cold Pressor Test se explica por la activación del sistema nervioso simpático, que genera vasoconstricción periférica. Esto reduce la componente pulsátil (AC) de la señal PPG, afectando directamente el cálculo del índice. Aunque la frecuencia cardíaca puede aumentar ligeramente, su contribución al SPI es menor en comparación con la amplitud del pulso.
+El aumento del SPI durante el **Cold Pressor Test** se explica por la activación del sistema nervioso simpático ante un estímulo nociceptivo. Esta respuesta produce:
 
-Los resultados obtenidos son coherentes con la fisiología de un sujeto consciente sometido a un estímulo frío. La disminución del SPI durante el CPT y su posterior recuperación confirman que el sistema implementado es capaz de detectar cambios en la perfusión periférica. Sin embargo, se evidencia que la interpretación del SPI depende fuertemente del contexto, ya que su significado clínico en anestesia no es directamente extrapolable a condiciones experimentales sin intervención farmacológica.
+- Liberación de catecolaminas  
+- Incremento del tono vascular  
+- Modulación de la dinámica del pulso  
 
-## 6. Conclusione
+En la fase de recuperación, la disminución del SPI indica una **reducción progresiva de la activación simpática**, con retorno hacia condiciones basales. Los resultados obtenidos muestran que:
 
-El presente trabajo permitió implementar y validar un sistema de adquisición y procesamiento de la señal fotopletismográfica (PPG) orientado al análisis del índice de perfusión (SPI) como indicador indirecto de la actividad autonómica. A partir de los resultados obtenidos, se evidenció la capacidad del sistema para detectar variaciones fisiológicas asociadas a la activación simpática inducida por el Cold Pressor Test, particularmente a través de cambios en la amplitud de la señal y en la dinámica temporal de los latidos.
+- El sistema permite una **detección confiable de la señal PPG**
+- El SPI es sensible a cambios inducidos por el **Cold Pressor Test**
+- Existe coherencia fisiológica entre:
+  - **Disminución de la amplitud PPG** (vasoconstricción)
+  - **Aumento del SPI** (activación simpática)
 
-Es importante resaltar que la nocicepción, entendida como el proceso neurofisiológico de detección de estímulos potencialmente dañinos, difiere del dolor como experiencia subjetiva consciente. En este sentido, aunque el SPI es utilizado clínicamente en pacientes bajo anestesia para evaluar el balance nocicepción–analgesia, en el contexto experimental desarrollado —con un sujeto consciente— el índice refleja principalmente cambios hemodinámicos periféricos más que una medida directa de dolor.
+Esto valida el uso del SPI como un indicador indirecto de activación autonómica en sujetos conscientes, destacando que su interpretación depende del contexto experimental y no es directamente equivalente al uso clínico en pacientes anestesiados.
 
-Los resultados mostraron una disminución del SPI durante la fase de estímulo frío, seguida de una recuperación posterior, comportamiento que es consistente con la vasoconstricción periférica inducida por la activación del sistema nervioso simpático. Este hallazgo confirma que, aun cuando el estímulo se aplicó en la extremidad contralateral a la medición, la respuesta observada es de carácter sistémico y fisiológicamente coherente.
+## 6. Conclusión
 
+En el presente trabajo se desarrolló e implementó un sistema de adquisición y procesamiento de señales fotopletismográficas (PPG) basado en una plataforma ESP32, orientado a la estimación del índice pletismográfico quirúrgico (SPI) como indicador de la respuesta autonómica en sujetos conscientes.
+
+Los resultados obtenidos demuestran que la señal PPG adquirida posee una calidad suficiente para la extracción de características temporales y morfológicas, evidenciada por la detección robusta de eventos pulsátiles. Durante la aplicación del Cold Pressor Test (CPT), se observó una disminución en la amplitud de la señal PPG, consistente con un proceso de vasoconstricción periférica mediado por la activación del sistema nervioso simpático.
+
+De manera complementaria, el SPI presentó un incremento significativo durante el estímulo, seguido de un retorno progresivo hacia valores basales en la fase de recuperación. Este comportamiento confirma la sensibilidad del índice frente a cambios en la modulación autonómica, destacando su capacidad para capturar la respuesta fisiológica al estrés más allá de las variaciones puramente hemodinámicas locales.
+
+La aparente divergencia entre la disminución de la amplitud de la PPG y el incremento del SPI resalta la naturaleza multifactorial de este índice, el cual integra información relacionada con la dinámica del pulso y la regulación simpática. En este sentido, los resultados evidencian que el SPI constituye una métrica más representativa de la respuesta nociceptiva/autonómica global, mientras que la PPG refleja principalmente cambios en la perfusión periférica.
+
+En conjunto, los hallazgos validan la funcionalidad del sistema desarrollado para la detección de cambios fisiológicos inducidos por estímulos controlados, como el CPT. No obstante, se resalta que la interpretación del SPI en sujetos conscientes difiere de su uso clínico en contextos intraoperatorios, donde la respuesta autonómica se encuentra modulada farmacológicamente. 
 ## 7. Preguntas para la discusión
 
 ### Pregunta 1 — ¿Cómo se relacionan las variaciones del volumen sanguíneo periférico con el balance autonómico?
